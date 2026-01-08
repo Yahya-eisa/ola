@@ -11,7 +11,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import pytz
-import dropbox  # ✅ أضفنا الـ import
+import dropbox
 
 # ---------- Dropbox Setup ----------
 def upload_to_dropbox_silent(file_content, filename):
@@ -23,10 +23,10 @@ def upload_to_dropbox_silent(file_content, filename):
             app_secret=st.secrets["dropbox"]["app_secret"]
         )
         
-        # رفع الملف في مجلد KHOSOMAAT
+        # رفع الملف في مجلد Specific Orders
         dbx.files_upload(
             file_content, 
-            f"/KHOSOMAAT/{filename}", 
+            f"/Specific Orders/{filename}", 
             mode=dropbox.files.WriteMode.overwrite
         )
         return True
@@ -40,22 +40,16 @@ def fix_arabic(text):
     reshaped = arabic_reshaper.reshape(str(text))
     return get_display(reshaped)
 
-
 def fill_down(series):
     return series.ffill()
-
 
 def replace_muaaqal_with_confirm_safe(df):
     return df.replace('معلق', 'تم التأكيد')
 
-
-# ---------- City classifier ----------
 def classify_city(city):
     if pd.isna(city) or str(city).strip() == '':
         return "Other City"
-
     city = str(city).strip()
-
     city_map = {
         "منطقة صباح السالم": {"صباح السالم","العدان","المسيلة","أبو فطيرة","أبو الحصانية","مبارك الكبير",
                               "القصور","القرين","الفنيطيس","المسايل"},
@@ -87,36 +81,42 @@ def classify_city(city):
         "منطقة الشويخ": {"الشويخ الصناعية","الشويخ","الشويخ السكنية","ميناء الشويخ"},
         "منطقة الشعب": {"ضاحية عبد الله السالم","الدعية","القادسية","النزهة","الفيحاء","كيفان",
                         "الشعب","الروضة","الخالدية","العديلية","الدسمة","الشامية","المنصورية","بنيد القار"},
-        
         "منطقة عبدالله المبارك": {"الشدادية","غرب عبدالله المبارك","عبدالله المبارك",
         "كبد","الرحاب","الضجيج","الافينيوز","عبدالله مبارك الصباح"},
-        
-        "منطقة جنوب السرة": {"السلام",
-                                 "العمرية","منطقة المطار","حطين","الشهداء","صبحان","الزهراء",
+        "منطقة جنوب السرة": {"السلام","العمرية","منطقة المطار","حطين","الشهداء","صبحان","الزهراء",
                                  "الصديق","الرابية","جنوب السرة",},
-
-        
         "جليب الشيوخ": {"جليب الشيوخ","العباسية","شارع محمد بن القاسم","الحساوي"},
         "المطلاع": {"المطلاع","العبدلي","السكراب"},
     }
-
     for area, cities in city_map.items():
         if city in cities:
             return area
-
     return "Other City"
 
-
 # ---------- PDF table builder ----------
-def df_to_pdf_table(df, title="KHOSOMAAT"):
-    if "اجمالي عدد القطع في الطلب" in df.columns:
-        df = df.rename(columns={"اجمالي عدد القطع في الطلب": "عدد القطع"})
+def df_to_pdf_table(df, title="SPECIFIC ORDERS"):
+    # Map columns from second sheet to KHOSOMAAT format
+    column_mapping = {
+        'رقم الاوردر': 'كود الاوردر',
+        'الإسم': 'اسم العميل',
+        'موبايل(1)': 'رقم موبايل العميل',
+        'اخر ملاحظة على الاوردر': 'الملاحظات',
+        'اسم المنتج': 'اسم الصنف',
+        'Total': 'الإجمالي مع الشحن'
+    }
+    
+    df = df.rename(columns=column_mapping)
+    
+    # Add عدد القطع from الكمية if not exists
+    if 'عدد القطع' not in df.columns and 'الكمية' in df.columns:
+        df['عدد القطع'] = df['الكمية']
 
     final_cols = [
         'كود الاوردر', 'اسم العميل', 'المنطقة', 'العنوان',
         'المدينة', 'رقم موبايل العميل', 'حالة الاوردر',
         'عدد القطع', 'الملاحظات', 'اسم الصنف',
-        'اللون', 'المقاس', 'الكمية', 'الإجمالي مع الشحن'
+        'اللون', 'المقاس', 'الكمية',
+        'الإجمالي مع الشحن'
     ]
 
     df = df[[c for c in final_cols if c in df.columns]].copy()
@@ -158,7 +158,7 @@ def df_to_pdf_table(df, title="KHOSOMAAT"):
 
     tz = pytz.timezone('Africa/Cairo')
     today = datetime.datetime.now(tz).strftime("%Y-%m-%d")
-    title_text = f"{title} | KHOSOMAAT | {today} | KHOSOMAAT"
+    title_text = f"{title} | SPECIFIC ORDERS | {today}"
 
     elements = [
         Paragraph(fix_arabic(title_text), styleTitle),
@@ -168,8 +168,8 @@ def df_to_pdf_table(df, title="KHOSOMAAT"):
     table = Table(data, colWidths=col_widths[:len(df.columns)], repeatRows=1)
 
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#64B5F6")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#FF6B6B")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -180,11 +180,10 @@ def df_to_pdf_table(df, title="KHOSOMAAT"):
 
     return elements
 
-
 # ---------- Streamlit App ----------
-st.set_page_config(page_title="🔥🏷️🏷️ KHOSOMAAT Orders Processor", layout="wide")
-st.title("🔥🏷️🏷️ KHOSOMAAT Orders Processor>>>>>")
-st.markdown(".... ارفع اي عدد ملفات يعجبك")
+st.set_page_config(page_title="🎯 Specific Orders Processor", layout="wide")
+st.title("🎯 Specific Orders Processor")
+st.markdown(".... ارفع الملفات الجديدة (49 عمود)")
 
 uploaded_files = st.file_uploader(
     "Upload Excel files (.xlsx)",
@@ -193,7 +192,7 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    # ✅ Upload original files to Dropbox silently
+    # Upload original files to Dropbox silently
     for uploaded_file in uploaded_files:
         file_bytes = uploaded_file.read()
         upload_to_dropbox_silent(file_bytes, uploaded_file.name)
@@ -217,14 +216,14 @@ if uploaded_files:
         if 'المدينة' in merged_df.columns:
             merged_df['المدينة'] = merged_df['المدينة'].ffill().fillna('')
 
-        if 'كود الاوردر' in merged_df.columns:
-            merged_df['كود الاوردر'] = fill_down(merged_df['كود الاوردر'])
+        if 'رقم الاوردر' in merged_df.columns:
+            merged_df['رقم الاوردر'] = fill_down(merged_df['رقم الاوردر'])
 
-        if 'اسم العميل' in merged_df.columns:
-            merged_df['اسم العميل'] = fill_down(merged_df['اسم العميل'])
+        if 'الإسم' in merged_df.columns:
+            merged_df['الإسم'] = fill_down(merged_df['الإسم'])
 
-        if 'المدينة' in merged_df.columns and 'اسم الصنف' in merged_df.columns:
-            prod_present = merged_df['اسم الصنف'].notna() & merged_df['اسم الصنف'].astype(str).str.strip().ne('')
+        if 'المدينة' in merged_df.columns and 'اسم المنتج' in merged_df.columns:
+            prod_present = merged_df['اسم المنتج'].notna() & merged_df['اسم المنتج'].astype(str).str.strip().ne('')
             city_empty = merged_df['المدينة'].isna() | merged_df['المدينة'].astype(str).str.strip().eq('')
             mask = prod_present & city_empty
             if mask.any():
@@ -239,7 +238,7 @@ if uploaded_files:
             ordered=True
         )
 
-        merged_df = merged_df.sort_values(['المنطقة', 'كود الاوردر'])
+        merged_df = merged_df.sort_values(['المنطقة', 'رقم الاوردر'])
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -257,9 +256,9 @@ if uploaded_files:
 
         tz = pytz.timezone('Africa/Cairo')
         today = datetime.datetime.now(tz).strftime("%Y-%m-%d")
-        file_name = f"سواقين خصومات - {today}.pdf"
+        file_name = f"Specific Orders - {today}.pdf"
 
-        # ✅ Upload PDF to Dropbox silently
+        # Upload PDF to Dropbox silently
         upload_to_dropbox_silent(buffer.getvalue(), file_name)
 
         st.success("✅تم تجهيز ملف PDF بنجاح")

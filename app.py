@@ -190,9 +190,9 @@ def df_to_pdf_table(df, title="SPECIFIC ORDERS"):
     return elements
 
 # ---------- Streamlit App ----------
-st.set_page_config(page_title="🎯 Specific Orders Processor", layout="wide")
-st.title("🎯 Specific Orders Processor")
-st.markdown(".... ارفع الملفات الجديدة (49 عمود)")
+st.set_page_config(page_title="🎯 اوردرات المسوقين", layout="wide")
+st.title("🎯 اوردرات المسوقين")
+st.markdown(".... ارفع الملفات الجديدة ")
 
 uploaded_files = st.file_uploader(
     "Upload Excel files (.xlsx)",
@@ -277,4 +277,5 @@ if uploaded_files:
             file_name=file_name,
             mime="application/pdf"
         )
+
 

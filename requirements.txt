@@ -1,0 +1,8 @@
+streamlit
+pandas
+openpyxl
+reportlab
+arabic-reshaper
+python-bidi
+pytz
+dropbox

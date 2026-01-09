@@ -106,7 +106,7 @@ def classify_city(city):
 def df_to_pdf_table(df, title="SPECIFIC ORDERS"):
     # Map columns from second sheet to KHOSOMAAT format
     column_mapping = {
-        'رقم الاوردر': 'الرقم العشوائي',
+        'الرقم العشوائي': 'الرقم العشوائي',
         'الإسم': 'اسم العميل',
         'موبايل(1)': 'رقم موبايل العميل',
         'اخر ملاحظة على الاوردر': 'الملاحظات',
@@ -277,6 +277,7 @@ if uploaded_files:
             file_name=file_name,
             mime="application/pdf"
         )
+
 
 
 

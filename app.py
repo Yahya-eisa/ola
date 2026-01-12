@@ -11,27 +11,6 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import pytz
-import dropbox
-
-# ---------- Dropbox Setup ----------
-def upload_to_dropbox_silent(file_content, filename):
-    """Upload file to Dropbox silently in background using Refresh Token"""
-    try:
-        dbx = dropbox.Dropbox(
-            oauth2_refresh_token=st.secrets["dropbox"]["refresh_token"],
-            app_key=st.secrets["dropbox"]["app_key"],
-            app_secret=st.secrets["dropbox"]["app_secret"]
-        )
-        
-        # رفع الملف في مجلد Specific Orders
-        dbx.files_upload(
-            file_content, 
-            f"/Specific Orders/{filename}", 
-            mode=dropbox.files.WriteMode.overwrite
-        )
-        return True
-    except Exception as e:
-        return False
 
 # ---------- Arabic helpers ----------
 def fix_arabic(text):
@@ -52,7 +31,6 @@ def classify_city(city):
     
     city = str(city).strip()
     
-    # New city mapping based on the Excel file
     city_map = {
         "حولي": {"البدع", "الرميثية" ,"الجابرية", "الخالدية", "الدسمة", "الدعية", "الروضة", "الروميثية", 
                 "السالمية", "السرة", "الشامية", "الشعب", "العديلية", "الفيحاء", "القادسية", 
@@ -93,18 +71,14 @@ def classify_city(city):
                                "صباح السالم", "مبارك الكبير"},
     }
     
-    # Check exact match first
     for area, cities in city_map.items():
         if city in cities:
             return area
     
-    # If no exact match, return Other City
     return "Other City"
 
 
-# ---------- PDF table builder ----------
 def df_to_pdf_table(df, title="SPECIFIC ORDERS"):
-    # Map columns from second sheet to KHOSOMAAT format
     column_mapping = {
         'الرقم العشوائي': 'الرقم العشوائي',
         'الإسم': 'اسم العميل',
@@ -116,7 +90,6 @@ def df_to_pdf_table(df, title="SPECIFIC ORDERS"):
     
     df = df.rename(columns=column_mapping)
     
-    # Add عدد القطع from الكمية if not exists
     if 'عدد القطع' not in df.columns and 'الكمية' in df.columns:
         df['عدد القطع'] = df['الكمية']
 
@@ -201,12 +174,6 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    # Upload original files to Dropbox silently
-    for uploaded_file in uploaded_files:
-        file_bytes = uploaded_file.read()
-        upload_to_dropbox_silent(file_bytes, uploaded_file.name)
-        uploaded_file.seek(0)
-    
     pdfmetrics.registerFont(TTFont('Arabic', 'Amiri-Regular.ttf'))
     pdfmetrics.registerFont(TTFont('Arabic-Bold', 'Amiri-Bold.ttf'))
 
@@ -267,9 +234,6 @@ if uploaded_files:
         today = datetime.datetime.now(tz).strftime("%Y-%m-%d")
         file_name = f"ECOMERG Orders - {today}.pdf"
 
-        # Upload PDF to Dropbox silently
-        upload_to_dropbox_silent(buffer.getvalue(), file_name)
-
         st.success("✅تم تجهيز ملف PDF بنجاح")
         st.download_button(
             label="⬇️⬇️ تحميل ملف PDF",
@@ -277,12 +241,3 @@ if uploaded_files:
             file_name=file_name,
             mime="application/pdf"
         )
-
-
-
-
-
-
-
-
-
